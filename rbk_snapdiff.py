@@ -14,7 +14,7 @@ def usage():
     sys.stderr.write("-D | --DEBUG : Enables Debug mode\n")
     sys.stderr.write("-c | -- creds : Allows the Rubrik credentials to be put on the CLI [user:password\n")
     sys.stderr.write("-t | -- token : Specify a Rubrik API token on the CLI.  This is mandatory of MFA is enabled\n")
-    sys.stderr.write("command : ['status, 'enable', 'disable']\n")
+    sys.stderr.write("command : ['status', 'enable', 'disable']\n")
     sys.stderr.write("rubrik : Name/IP of Rubrik\n")
     sys.stderr.write("netapp : Name/IP of NetApp SVM (not cluster management)\n")
     exit(0)
