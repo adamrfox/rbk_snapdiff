@@ -3,7 +3,7 @@ A project to enable/disable SnapDiff on a Rubrik Cluster via API
 
 This is a quick script to turn on Rubrik's ability to use NetApp SnapDiff functionality via API.
 
-<format>
+<pre>
 Usage: rbk_snapdiff.py [-hD] [-t token] [-c creds] command rubrik netapp
 -h | --help : Prints usage
 -D | --DEBUG : Enables Debug mode
@@ -12,4 +12,4 @@ Usage: rbk_snapdiff.py [-hD] [-t token] [-c creds] command rubrik netapp
 command : ['status, 'enable', 'disable']
 rubrik : Name/IP of Rubrik
 netapp : Name/IP of NetApp SVM (not cluster management)
-</format>
+</pre>
