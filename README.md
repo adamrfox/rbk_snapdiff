@@ -2,10 +2,6 @@
 A project to enable/disable SnapDiff on a Rubrik Cluster via API
 
 This is a quick script to turn on Rubrik's ability to use NetApp SnapDiff functionality via API.
-Note:  This script used the Rubrik Python SDK.  This will need to be installed in order for it to work via pip:
-<pre>
-pip install rubrik-cdm
-</pre>
 
 <pre>
 Usage: rbk_snapdiff.py [-hD] [-t token] [-c creds] command rubrik netapp
