@@ -4,7 +4,9 @@ from __future__ import print_function
 import sys
 import getopt
 import getpass
-import rubrik_cdm
+import requests
+import base64
+import json
 import urllib3
 urllib3.disable_warnings()
 
@@ -29,7 +31,6 @@ def python_input (message):
     else:
         value = raw_input(message)
     return(value)
-
 
 if __name__ == "__main__":
     DEBUG = False
@@ -64,10 +65,14 @@ if __name__ == "__main__":
             user = python_input("Rubrik User: ")
         if not password:
             password = getpass.getpass("Rubrik Password: ")
-        rubrik = rubrik_cdm.Connect(rubrik_host, user, password)
+        auth_s = user + ":" + password
+        auth_headers = {'Authorization': 'Basic ' + base64.encodebytes(auth_s.encode()).decode().replace('\n','')}
     else:
-        rubrik = rubrik_cdm.Connect(rubrik_host, api_token=token)
-    nas_host = rubrik.get('v1', '/host?name=' + ntap, timeout=timeout)
+        auth_headers = {'Authorization': 'Bearer ' + token, 'accept': 'application/json', 'Content-type': 'application/json'}
+    dprint(str(auth_headers))
+    nas_host_data = requests.get('https://'+ rubrik_host + '/api/v1/host?name=' + ntap, headers=auth_headers, verify=False, timeout=timeout)
+    nas_host = json.loads(nas_host_data.content.decode('utf-8'))
+    dprint(str(nas_host))
     if nas_host['data'][0]['nasBaseConfig']['vendorType'] != "NETAPP":
         sys.stderr.write(ntap + " is not an integrated NTAP array\n")
         exit(1)
@@ -80,6 +85,7 @@ if __name__ == "__main__":
     except:
         sd_status = False
     host_id = nas_host['data'][0]['id']
+    dprint("host_id: " + host_id)
     if not ntap_user:
         ntap_user = python_input("NTAP API User: ")
     ntap_api_password = getpass.getpass("NTAP API Password [" + ntap_user + "]: ")
@@ -89,12 +95,16 @@ if __name__ == "__main__":
         else:
             print(ntap + " : disabled")
     elif cmd.lower() == "enable" or cmd.lower() == "disable":
-        payload = {'hostname': ntap, 'nasConfig': {'vendorType': 'NETAPP', 'apiUsername': ntap_user, 'apiPassword': ntap_api_password}}
+        payload = {"hostname": ntap, "nasConfig": {"vendorType": "NETAPP", "apiUsername": ntap_user, "apiPassword": ntap_api_password}}
         if cmd.lower() == "enable":
             payload['nasConfig']['isNetAppSnapDiffEnabled'] = True
         else:
             payload['nasConfig']['isNetAppSnapDiffEnabled'] = False
-        result = rubrik.patch('v1', '/host/' + host_id, config=payload, timeout=timeout)
+        payload = json.dumps(payload)
+        dprint(str(payload))
+        result_data = requests.patch('https://' + rubrik_host + '/api/v1/host/' + host_id, headers=auth_headers, data=payload, verify=False, timeout=timeout)
+        dprint(str(result_data.content))
+        result = json.loads(result_data.content.decode('utf-8'))
         if result['nasBaseConfig']['isNetAppSnapDiffEnabled']:
             print(ntap + " : enabled")
         else:
