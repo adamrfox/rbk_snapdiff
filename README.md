@@ -8,7 +8,6 @@ Usage: rbk_snapdiff.py [-hD] [-t token] [-c creds] command rubrik netapp
 -h | --help : Prints usage
 -D | --DEBUG : Enables Debug mode
 -c | -- creds : Allows the Rubrik credentials to be put on the CLI [user:password
--s | --share : Shows share level status.  Note: Only used with the 'status' command
 -t | -- token : Specify a Rubrik API token on the CLI.  This is mandatory of MFA is enabled
 command : ['status, 'enable', 'disable']
 rubrik : Name/IP of Rubrik
