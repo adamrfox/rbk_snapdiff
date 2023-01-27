@@ -45,25 +45,25 @@ if __name__ == "__main__":
     timeout = 360
     host_id = ""
     sd_status = False
-    SHARES = False
+    share = ""
 
-    optlist, args = getopt.getopt(sys.argv[1:], 'hDst:c:', ['--help', '--DEBUG', '--shares', '--token=', '--creds='])
+    optlist, args = getopt.getopt(sys.argv[1:], 'hDt:c:', ['--help', '--DEBUG', '--token=', '--creds='])
     for opt, a in optlist:
         if opt in ['-h', '--help']:
             usage()
         if opt in ['-D', '--DEBUG']:
             DEBUG = True
-        if opt in ['-s', '--shares']:
-            SHARES = True
         if opt in ['-t', '--token']:
             token = a
         if opt in ['-c', '--creds']:
             (user, password) = a.split(':')
-
     try:
-        (cmd, rubrik_host, ntap) = args
+        (cmd, rubrik_host, ntap, share) = args
     except:
-        usage()
+        try:
+            (cmd, rubrik_host, ntap) = args
+        except:
+            usage()
     if not token:
         if not user:
             user = python_input("Rubrik User: ")
@@ -98,7 +98,7 @@ if __name__ == "__main__":
             print(ntap + " : enabled")
         else:
             print(ntap + " : disabled")
-        if SHARES:
+        if share:
             print("---------------------------")
             done = False
             cur = ""
@@ -109,18 +109,20 @@ if __name__ == "__main__":
                     api_endpoint = '/host/share'
                 sh_data = requests.get('https://' + rubrik_host + '/api/internal' + api_endpoint, headers=auth_headers, verify=False, timeout=timeout)
                 sh = json.loads(sh_data.content.decode('utf-8'))
-                for share in sh['data']:
-                    if share['hostId'] != host_id:
+                for share_inst in sh['data']:
+                    if share_inst['hostId'] != host_id:
+                        continue
+                    if share != "*" and share != '-' and share_inst['exportPoint'] != share:
                         continue
                     try:
-                        share['hostShareParameters']['isNetAppSnapDiffEnabled']
+                        share_inst['hostShareParameters']['isNetAppSnapDiffEnabled']
                     except:
-                        print(share['exportPoint'] + ' : disabled')
+                        print(share_inst['exportPoint'] + ' : disabled')
                         continue
-                    if share['hostShareParameters']['isNetAppSnapDiffEnabled']:
-                        print(share['exportPoint'] + " : enabled")
+                    if share_inst['hostShareParameters']['isNetAppSnapDiffEnabled']:
+                        print(share_inst['exportPoint'] + " : enabled")
                     else:
-                        print(share['exportPoint'] + " : disabled")
+                        print(share_inst['exportPoint'] + " : disabled")
                 if sh['hasMore']:
                     cur = sh['nextCursor']
                 else:
@@ -133,13 +135,50 @@ if __name__ == "__main__":
             payload['nasConfig']['isNetAppSnapDiffEnabled'] = False
         payload = json.dumps(payload)
         dprint(str(payload))
-        result_data = requests.patch('https://' + rubrik_host + '/api/v1/host/' + host_id, headers=auth_headers, data=payload, verify=False, timeout=timeout)
-        dprint(str(result_data.content))
-        result = json.loads(result_data.content.decode('utf-8'))
-        if result['nasBaseConfig']['isNetAppSnapDiffEnabled']:
-            print(ntap + " : enabled")
+        if not share:
+            result_data = requests.patch('https://' + rubrik_host + '/api/v1/host/' + host_id, headers=auth_headers, data=payload, verify=False, timeout=timeout)
+            dprint(str(result_data.content))
+            result = json.loads(result_data.content.decode('utf-8'))
+            if result['nasBaseConfig']['isNetAppSnapDiffEnabled']:
+                print(ntap + " : enabled")
+            else:
+                print(ntap + " : disabled")
         else:
-            print(ntap + " : disabled")
+            done = False
+            cur = ""
+            while not done:
+                if cur:
+                    api_endpoint = '/host/share&cursor=' + cur
+                else:
+                    api_endpoint = '/host/share'
+                sh_data = requests.get('https://' + rubrik_host + '/api/internal' + api_endpoint, headers=auth_headers,
+                                       verify=False, timeout=timeout)
+                sh = json.loads(sh_data.content.decode('utf-8'))
+                for share_inst in sh['data']:
+                    if share_inst['hostId'] != host_id:
+                        continue
+                    if share_inst['exportPoint'] != share:
+                        continue
+                    if cmd.lower() == "enable":
+                        payload = {'hostShareParameters': {'isNetAppSnapDiffEnabled': True}}
+                    else:
+                        payload = {'hostShareParameters': {'isNetAppSnapDiffEnabled': False}}
+                    payload = json.dumps(payload)
+                    dprint(str(payload))
+                    result_data = requests.patch('https://' + rubrik_host + '/api/internal/host/share/' + share_inst['id'],
+                                                 headers=auth_headers, data=payload, verify=False, timeout=timeout)
+                    dprint(str(result_data.content))
+                    result = json.loads(result_data.content.decode('utf-8'))
+                    if result['hostShareParameters']['isNetAppSnapDiffEnabled']:
+                        print(ntap + " : " + share_inst['exportPoint'] + " : enabled")
+                    else:
+                        print(ntap + " : " + share_inst['exportPoint'] + " : disabled")
+                    done = True
+                    break
+                if sh['hasMore']:
+                    cur = sh['nextCursor']
+                else:
+                    done = True
     else:
         sys.stderr.write("Valid commands: ['status', 'enable', 'disable']")
         exit(2)
