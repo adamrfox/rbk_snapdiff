@@ -11,7 +11,7 @@ import urllib3
 urllib3.disable_warnings()
 
 def usage():
-    sys.stderr.write("Usage: rbk_snapdiff.py [-hDs] [-t token] [-c creds] command rubrik netapp\n")
+    sys.stderr.write("Usage: rbk_snapdiff.py [-hDs] [-t token] [-c creds] command rubrik netapp [share]\n")
     sys.stderr.write("-h | --help : Prints usage\n")
     sys.stderr.write("-D | --DEBUG : Enables Debug mode\n")
     sys.stderr.write("-s | --share : Shows share level status.  Note: Only used with the 'status' command\n")
@@ -20,6 +20,7 @@ def usage():
     sys.stderr.write("command : ['status', 'enable', 'disable']\n")
     sys.stderr.write("rubrik : Name/IP of Rubrik\n")
     sys.stderr.write("netapp : Name/IP of NetApp SVM (not cluster management)\n")
+    sys.stderr.write("share : [optional] Share or export path to show or change.  For show only, using * or - will show all shares on the host\n")
     exit(0)
 
 def dprint(message):
