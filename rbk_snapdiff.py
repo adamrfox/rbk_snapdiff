@@ -11,9 +11,10 @@ import urllib3
 urllib3.disable_warnings()
 
 def usage():
-    sys.stderr.write("Usage: rbk_snapdiff.py [-hD] [-t token] [-c creds] command rubrik netapp\n")
+    sys.stderr.write("Usage: rbk_snapdiff.py [-hDs] [-t token] [-c creds] command rubrik netapp\n")
     sys.stderr.write("-h | --help : Prints usage\n")
     sys.stderr.write("-D | --DEBUG : Enables Debug mode\n")
+    sys.stderr.write("-s | --share : Shows share level status.  Note: Only used with the 'status' command\n")
     sys.stderr.write("-c | -- creds : Allows the Rubrik credentials to be put on the CLI [user:password\n")
     sys.stderr.write("-t | -- token : Specify a Rubrik API token on the CLI.  This is mandatory of MFA is enabled\n")
     sys.stderr.write("command : ['status', 'enable', 'disable']\n")
@@ -44,13 +45,16 @@ if __name__ == "__main__":
     timeout = 360
     host_id = ""
     sd_status = False
+    SHARES = False
 
-    optlist, args = getopt.getopt(sys.argv[1:], 'hDt:c:', ['--help', '--DEBUG', '--token=', '--creds='])
+    optlist, args = getopt.getopt(sys.argv[1:], 'hDst:c:', ['--help', '--DEBUG', '--shares', '--token=', '--creds='])
     for opt, a in optlist:
         if opt in ['-h', '--help']:
             usage()
         if opt in ['-D', '--DEBUG']:
             DEBUG = True
+        if opt in ['-s', '--shares']:
+            SHARES = True
         if opt in ['-t', '--token']:
             token = a
         if opt in ['-c', '--creds']:
@@ -94,6 +98,33 @@ if __name__ == "__main__":
             print(ntap + " : enabled")
         else:
             print(ntap + " : disabled")
+        if SHARES:
+            print("---------------------------")
+            done = False
+            cur = ""
+            while not done:
+                if cur:
+                    api_endpoint = '/host/share&cursor=' + cur
+                else:
+                    api_endpoint = '/host/share'
+                sh_data = requests.get('https://' + rubrik_host + '/api/internal' + api_endpoint, headers=auth_headers, verify=False, timeout=timeout)
+                sh = json.loads(sh_data.content.decode('utf-8'))
+                for share in sh['data']:
+                    if share['hostId'] != host_id:
+                        continue
+                    try:
+                        share['hostShareParameters']['isNetAppSnapDiffEnabled']
+                    except:
+                        print(share['exportPoint'] + ' : disabled')
+                        continue
+                    if share['hostShareParameters']['isNetAppSnapDiffEnabled']:
+                        print(share['exportPoint'] + " : enabled")
+                    else:
+                        print(share['exportPoint'] + " : disabled")
+                if sh['hasMore']:
+                    cur = sh['nextCursor']
+                else:
+                    done = True
     elif cmd.lower() == "enable" or cmd.lower() == "disable":
         payload = {"hostname": ntap, "nasConfig": {"vendorType": "NETAPP", "apiUsername": ntap_user, "apiPassword": ntap_api_password}}
         if cmd.lower() == "enable":
